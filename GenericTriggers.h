@@ -1,0 +1,90 @@
+#pragma once
+
+#define TRIGGER_MASK 7
+#define SPEED_MASK 0x18
+
+#define MODEL_MASK 0x20
+#define DIRECTION_MASK 0x40
+#define TARGET_MASK 0x380
+#define CHANGE_MASK 0xc00
+#define CRUSH_MASK 0x1000
+
+#define DOORTYPE_MASK 0x60
+#define DOORMONSTER_MASK 0x80
+#define DOORDELAY_MASK 0x300
+
+#define LOCKTYPE_MASK 0x20
+#define LOCKLOCK_MASK 0x1c0
+#define LOCKSISK_MASK 0x200
+
+#define MONSTER_MASK 0x20
+#define LIFTDELAY_MASK 0xc0
+#define LIFTTARGET_MASK 0x300
+
+#define STAIRSTEP_MASK 0xc0
+#define STAIRDIR_MASK 0x100
+#define STAIRTEX_MASK 0x200
+
+#define CRUSHSILENT_MASK 0x40
+
+
+
+#define TRIGGER_SHIFT 0
+#define SPEED_SHIFT 3
+
+#define MODEL_SHIFT 5
+#define DIRECTION_SHIFT 6
+#define TARGET_SHIFT 7
+#define CHANGE_SHIFT 10
+#define CRUSH_SHIFT 12
+
+#define DOORTYPE_SHIFT 5
+#define DOORMONSTER_SHIFT 7
+#define DOORDELAY_SHIFT 8
+
+#define LOCKTYPE_SHIFT 5
+#define LOCKLOCK_SHIFT 6
+#define LOCKSISK_SHIFT 9
+
+#define MONSTER_SHIFT 5
+#define LIFTDELAY_SHIFT 6
+#define LIFTTARGET_SHIFT 8
+
+#define STAIRSTEP_SHIFT 6
+#define STAIRDIR_SHIFT 8
+#define STAIRTEX_SHIFT 9
+
+#define CRUSHSILENT_SHIFT 6
+
+
+
+#define FLOOR_BASE 0x6000
+#define CEILING_BASE 0x4000
+#define DOOR_BASE 0x3c00
+#define LOCK_BASE 0x3800
+#define LIFT_BASE 0x3400
+#define STAIR_BASE 0x3000
+#define CRUSHER_BASE 0x2f80
+
+#define FLOOR_COUNT 0x2000
+#define CEILING_COUNT 0x2000
+#define DOOR_COUNT 0x400
+#define LOCK_COUNT 0x400
+#define LIFT_COUNT 0x400
+#define STAIR_COUNT 0x400
+#define CRUSHER_COUNT 0x80
+
+#define GENERIC_START CRUSHER_BASE
+#define GENERIC_END (FLOOR_BASE+FLOOR_COUNT)
+
+
+#define GET(v,f) \
+	(((v)&(f##_MASK))>>f##_SHIFT)
+
+#define SET(v,f) \
+	(((v)<<f##_SHIFT)&f##_MASK)
+
+
+const char * GetGenTrigger(int v);
+int GetGenLock(int v);
+wxString GetGenText(int v);
