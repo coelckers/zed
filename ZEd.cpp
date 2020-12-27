@@ -2,6 +2,7 @@
 #include "ZEd.h"
 #include "ResourceFile.h"
 #include "texture.h"
+#include "cmdlib.h"
 
 
 // the global application state
@@ -88,15 +89,19 @@ void ZEdApp::LoadConfig()
 {
 	wxString path, name;
 	wxFileName ini;
+	bool isdir = false;
 
-#ifdef _DEBUG
-	config.ChangePathName("ZEd.ini");
-#else
-	wxFileName::SplitPath(wxString(argv[0]), &path, &name, NULL);
-	ini.Assign(path, name, "ini");
+	if (DirEntryExists("ZEd.ini", &isdir) && !isdir)
+	{
+		config.ChangePathName("ZEd.ini");
+	}
+	else
+	{
+		wxFileName::SplitPath(wxString(argv[0]), &path, &name, NULL);
+		ini.Assign(path, name, "ini");
+		config.ChangePathName(ini.GetLongPath().c_str());
+	}
 
-	config.ChangePathName(ini.GetLongPath().c_str());
-#endif
 	config.LoadConfigFile(NULL, NULL);
 
 	if (config.SetSection("config"))
@@ -137,11 +142,12 @@ bool ZEdApp::OnInit()
 	{
 		wxString path;
 
+/*
 #ifndef _DEBUG
 		wxFileName::SplitPath(wxString(wxGetApp().argv[0]), &path, NULL, NULL);
 		wxSetWorkingDirectory(path);
 #endif
-
+*/
 		TArray<const char *> iwads;
 
 		wxSystemOptions::SetOption(wxT("msw.remap"), 0);
@@ -149,12 +155,12 @@ bool ZEdApp::OnInit()
 		wxImage::AddHandler(new wxPNGHandler);
 		wxImage::AddHandler(new wxJPEGHandler);
 
-		frame = new ZEdFrame((wxFrame *)NULL, wxID_ANY, _T("ZEd v2.1"),
+		frame = new ZEdFrame((wxFrame *)NULL, wxID_ANY, _T("ZEd v2.2"),
 							wxDefaultPosition, wxSize(500, 400),
 							wxDEFAULT_FRAME_STYLE | wxMAXIMIZE);
 
-		frame->Maximize(true);
 		frame->Show(true);
+		frame->Maximize(true);
 		SetTopWindow(frame);
 		LoadConfig();
 

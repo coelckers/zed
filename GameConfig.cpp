@@ -23,6 +23,7 @@
 #include "GameConfig.h"
 #include "GenericTriggers.h"
 #include "doomerrors.h"
+#include "cmdlib.h"
 
 ColorList Colors;
 wxColour dummypen(0,0,128);
@@ -77,13 +78,18 @@ bool ParseColors()
 		wxString path, name;
 		wxFileName ini;
 
-#ifdef _DEBUG
-		sc.SC_OpenFile("configs/colors.cfg");
-#else
-		wxFileName::SplitPath(wxString(wxGetApp().argv[0]), &path, &name, NULL);
-		ini.Assign(path, "configs/colors", "cfg");
-		sc.SC_OpenFile(ini.GetLongPath().c_str());
-#endif
+		bool isdir = false;
+
+		if (DirEntryExists("configs/colors.cfg", &isdir) && !isdir)
+		{
+			sc.SC_OpenFile("configs/colors.cfg");
+		}
+		else
+		{
+			wxFileName::SplitPath(wxString(wxGetApp().argv[0]), &path, &name, NULL);
+			ini.Assign(path, "configs/colors", "cfg");
+			sc.SC_OpenFile(ini.GetLongPath().c_str());
+		}
 
 		if (!sc.SC_GetString())
 		{
@@ -959,7 +965,7 @@ bool GameConfig::ParseConfig(wxString config, bool things, bool keys, bool lines
 {
 	ScriptMan sc;
 	char buffer[256];
-	bool thisfile_extended;
+	bool thisfile_extended = false;
 	bool parseall = things && keys && lines && sectors && sides;
 
 	sprintf(buffer,"configs/%s", config.c_str());
