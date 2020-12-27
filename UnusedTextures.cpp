@@ -587,7 +587,7 @@ void DoGlobals()
 void CLevel::OnUnusedTextures(wxCommandEvent & event)
 {
 	wxString composed;
-	TArray<const char *> maplist;
+	TArray<MapRecord> maplist;
 
 	{
 		wxProgressDialog prog("Listing unused textures", "Initializing", 100, m_DrawWindow, wxPD_AUTO_HIDE | wxPD_APP_MODAL | wxPD_CAN_ABORT);
@@ -620,17 +620,17 @@ void CLevel::OnUnusedTextures(wxCommandEvent & event)
 		for(unsigned l=0;l<maplist.Size();l++)
 		{
 			CLevel * level = new CLevel(false);
-			int lumpno=rf->FindLump(maplist[l]);
+			int lumpno = maplist[l].maplump;
 			try
 			{
-				level->Load(lumpno+(QWORD(m_currentWAD+1)<<32), maplist[l]);
+				level->Load(lumpno+(QWORD(m_currentWAD+1)<<32), maplist[l].mapname);
 			}
 			catch(CRecoverableError * err)
 			{
-				composed += wxString::Format("%s: %s\n", maplist[l], err->GetMessage());
+				composed += wxString::Format("%s: %s\n", maplist[l].mapname, err->GetMessage());
 				continue;
 			}
-			if (!prog.Update(100*l/maplist.Size(), wxString::Format("processing %s",maplist[l]))) return;
+			if (!prog.Update(100*l/maplist.Size(), wxString::Format("processing %s",maplist[l].mapname))) return;
 
 			for(w=0;w<level->NumLines();w++)
 			{
@@ -683,7 +683,7 @@ void CLevel::OnUnusedTextures(wxCommandEvent & event)
 void CLevel::OnUsedTextures(wxCommandEvent & event)
 {
 	wxString composed;
-	TArray<const char *> maplist;
+	TArray<MapRecord> maplist;
 
 	{
 		wxProgressDialog prog("Listing used textures", "Initializing", 100, m_DrawWindow, wxPD_AUTO_HIDE | wxPD_APP_MODAL | wxPD_CAN_ABORT);
@@ -716,17 +716,17 @@ void CLevel::OnUsedTextures(wxCommandEvent & event)
 		for(unsigned l=0;l<maplist.Size();l++)
 		{
 			CLevel * level = new CLevel(false);
-			int lumpno=rf->FindLump(maplist[l]);
+			int lumpno=maplist[l].maplump;
 			try
 			{
-				level->Load(lumpno+(QWORD(m_currentWAD+1)<<32), maplist[l]);
+				level->Load(lumpno+(QWORD(m_currentWAD+1)<<32), maplist[l].mapname);
 			}
 			catch(CRecoverableError * err)
 			{
-				composed += wxString::Format("%s: %s\n", maplist[l], err->GetMessage());
+				composed += wxString::Format("%s: %s\n", maplist[l].mapname, err->GetMessage());
 				continue;
 			}
-			if (!prog.Update(100*l/maplist.Size(), wxString::Format("processing %s",maplist[l]))) return;
+			if (!prog.Update(100*l/maplist.Size(), wxString::Format("processing %s",maplist[l].mapname))) return;
 
 			for(w=0;w<level->NumLines();w++)
 			{

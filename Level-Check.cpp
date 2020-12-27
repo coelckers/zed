@@ -1154,7 +1154,7 @@ bool CLevel::DoLevelCheck(wxProgressDialog & prog, int checkmode, int currentlev
 
 void CLevel::CheckPWAD(int mode)
 {
-	TArray<const char *> maplist;
+	TArray<MapRecord> maplist;
 	wxProgressDialog prog("Checking levels", "", 100, m_DrawWindow, wxPD_AUTO_HIDE | wxPD_APP_MODAL | wxPD_CAN_ABORT);
 	CResourceFile * rf = CResourceFile::GetResourceFile(m_currentWAD);
 	if (!rf) return;
@@ -1170,16 +1170,16 @@ void CLevel::CheckPWAD(int mode)
 		for(unsigned i=0;i<maplist.Size();i++)
 		{
 			CLevel * level = new CLevel(false);
-			int lumpno=rf->FindLump(maplist[i]);
+			int lumpno=maplist[i].maplump;
 			try
 			{
-				level->Load(lumpno+(QWORD(m_currentWAD+1)<<32), maplist[i]);
+				level->Load(lumpno+(QWORD(m_currentWAD+1)<<32), maplist[i].mapname);
 			}
 			catch (CRecoverableError *)
 			{
 				continue;
 			}
-			strOut += maplist[i];
+			strOut += maplist[i].mapname;
 			strOut += "\n";
 			if (!level->DoLevelCheck(prog, mode, i, maplist.Size()))
 			{

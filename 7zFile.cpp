@@ -267,7 +267,7 @@ void C7zFile::ReadDirectory(FileReader *wadinfo)
 
 		if (!strncmp(lump_p->fullname, "maps/", 5))
 		{
-			mapnames.Push(_strdup(lump_p->name));
+			mapnames.Push({ lumps.Size() - 1, _strdup(lump_p->name) });
 		}
 	}
 

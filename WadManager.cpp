@@ -69,6 +69,8 @@ private:
 
 	wxArrayString m_ConfigList;
 
+	TArray<MapRecord> m_mapRecords;
+
 	void MakeConfigList();
 	void AddRecentWAD(const char * name);
 	void GetRecentWADs();
@@ -409,18 +411,18 @@ void CWadManager::OnChangeConfig(wxCommandEvent & event)
 void CWadManager::OnChangeOpenWads(wxCommandEvent & event)
 {
 	wxString wad = m_ListOpenWads->GetStringSelection();
-	TArray<const char *> maplist;
 
+	m_mapRecords.Clear();
 	if (wad != "")
 	{
-		CResourceFile::GetMapList(wad.c_str(), maplist);
+		CResourceFile::GetMapList(wad.c_str(), m_mapRecords);
 	}
 
 	m_ListMaps->Clear();
 
-	for(unsigned i=0;i<maplist.Size();i++)
+	for(unsigned i=0;i< m_mapRecords.Size();i++)
 	{
-		m_ListMaps->Append(maplist[i]);
+		m_ListMaps->Append(m_mapRecords[i].mapname);
 	}
 }
 
@@ -488,7 +490,7 @@ void CWadManager::OnDblClickMaps(wxCommandEvent & event)
 	{
 		wxString buffer = m_ListMaps->GetString(mapindex);
 
-		int lumpindex = rf->FindLump(buffer.c_str());
+		int lumpindex = m_mapRecords[mapindex].maplump;
 
 		m_MapLump = ((QWORD)(wadindex+1)<<32) + lumpindex;
 

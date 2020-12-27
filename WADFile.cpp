@@ -81,14 +81,14 @@ CWADFile::CWADFile(const char * filename)
 			// Do a sanity check to verify that this map is properly accessible
 			if (FindLump(lumps[i-1].name) == i-1)
 			{
-				mapnames.Push(lumps[i-1].name);
+				mapnames.Push({ QWORD(i - 1), lumps[i - 1].name });
 			}
 		}
 		else if (!stricmp(lumps[i].name, "TEXTMAP"))
 		{
 			if (FindLump(lumps[i-1].name) == i-1)
 			{
-				mapnames.Push(lumps[i-1].name);
+				mapnames.Push({ QWORD(i - 1), lumps[i - 1].name });
 			}
 		}
 	}
@@ -151,7 +151,14 @@ CWADFile::CWADFile(const char * name, const char * memory)
 			// Do a sanity check to verify that this map is properly accessible
 			if (FindLump(lumps[i-1].name) == i-1)
 			{
-				mapnames.Push(lumps[i-1].name);
+				mapnames.Push({ QWORD(i - 1), lumps[i - 1].name });
+			}
+		}
+		else if (!stricmp(lumps[i].name, "TEXTMAP"))
+		{
+			if (FindLump(lumps[i - 1].name) == i - 1)
+			{
+				mapnames.Push({ QWORD(i - 1), lumps[i - 1].name });
 			}
 		}
 	}
@@ -315,7 +322,7 @@ void * CWADFile::CreateInMemory(int * length)
 //
 //==========================================================================
 
-void CWADFile::GetMapList(TArray<const char *> & array)
+void CWADFile::GetMapList(TArray<MapRecord> & array)
 {
 	for(unsigned int i=0;i<mapnames.Size ();i++)
 	{

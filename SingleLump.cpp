@@ -116,7 +116,7 @@ CSingleLump::~CSingleLump(void)
 //
 //==========================================================================
 
-void CSingleLump::GetMapList(TArray<const char *> & array)
+void CSingleLump::GetMapList(TArray<MapRecord> & array)
 {
 }
 

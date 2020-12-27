@@ -28,7 +28,7 @@
 
 void CLevel::OnWadListallusedthingsincurrentpwad(wxCommandEvent & event)
 {
-	TArray<const char *> maplist;
+	TArray<MapRecord> maplist;
 	wxString composed;
 
 	if (cgc==NULL)
@@ -72,14 +72,14 @@ void CLevel::OnWadListallusedthingsincurrentpwad(wxCommandEvent & event)
 		for(l=0;l<i;l++)
 		{
 			CLevel * level = new CLevel(false);
-			int lumpno=rf->FindLump(maplist[l]);
+			int lumpno=maplist[l].maplump;
 			try
 			{
-				level->Load(lumpno+(QWORD(m_currentWAD+1)<<32), maplist[l]);
+				level->Load(lumpno+(QWORD(m_currentWAD+1)<<32), maplist[l].mapname);
 			}
 			catch(CRecoverableError * err)
 			{
-				composed += wxString::Format("%s: %s\n", maplist[l], err->GetMessage());
+				composed += wxString::Format("%s: %s\n", maplist[l].mapname, err->GetMessage());
 				continue;
 			}
 			for(int w=0;w<level->NumThings();w++)
@@ -118,7 +118,7 @@ void CLevel::OnWadListallusedthingsincurrentpwad(wxCommandEvent & event)
 			{
 				if (list_thing[l*MAXTHING+w])
 				{
-					composed += wxString::Format("    %s: %dx (%dx)\n",(const char *)maplist[l],list_thing[l*MAXTHING+w],list_thing_sp[l*MAXTHING+w]);
+					composed += wxString::Format("    %s: %dx (%dx)\n", maplist[l].mapname, list_thing[l * MAXTHING + w], list_thing_sp[l * MAXTHING + w]);
 				}
 			}
 		}
@@ -132,7 +132,7 @@ void CLevel::OnWadListallusedthingsincurrentpwad(wxCommandEvent & event)
 
 void CLevel::OnWadListallusedlinedefandsectortypesinpwad(wxCommandEvent & event)
 {
-	TArray<const char *> maplist;
+	TArray<MapRecord> maplist;
 	wxString composed;
 
 	if (cgc==NULL)
@@ -181,15 +181,15 @@ void CLevel::OnWadListallusedlinedefandsectortypesinpwad(wxCommandEvent & event)
 		for(l=0;l<i;l++)
 		{
 			CLevel * level = new CLevel(false);
-			int lumpno=rf->FindLump(maplist[l]);
+			int lumpno=maplist[l].maplump;
 
 			try
 			{
-				level->Load(lumpno+(QWORD(m_currentWAD+1)<<32), maplist[l]);
+				level->Load(lumpno+(QWORD(m_currentWAD+1)<<32), maplist[l].mapname);
 			}
 			catch(CRecoverableError * err)
 			{
-				composed += wxString::Format("%s: %s\n", maplist[l], err->GetMessage());
+				composed += wxString::Format("%s: %s\n", maplist[l].mapname, err->GetMessage());
 				continue;
 			}
 
@@ -258,7 +258,7 @@ void CLevel::OnWadListallusedlinedefandsectortypesinpwad(wxCommandEvent & event)
 			{
 				if (list_line_doom[l*32768+w])
 				{
-					composed += wxString::Format("    %s: %dx\n",(const char *)maplist[l],list_line_doom[l*32768+w]);
+					composed += wxString::Format("    %s: %dx\n", maplist[l].mapname, list_line_doom[l * 32768 + w]);
 				}
 			}
 		}
@@ -283,7 +283,7 @@ void CLevel::OnWadListallusedlinedefandsectortypesinpwad(wxCommandEvent & event)
 				{
 					if (list_line_hexen[w+k+l*4096])
 					{
-						composed += wxString::Format("    %s: %dx\n",(const char *)maplist[l],list_line_hexen[w+k+l*4096]);
+						composed += wxString::Format("    %s: %dx\n", maplist[l].mapname, list_line_hexen[w + k + l * 4096]);
 					}
 				}
 			}
@@ -316,7 +316,7 @@ void CLevel::OnWadListallusedlinedefandsectortypesinpwad(wxCommandEvent & event)
 			{
 				if (list_sector[l*65536+w])
 				{
-					composed += wxString::Format("    %s: %dx\n",(const char *)maplist[l],list_sector[l*65536+w]);
+					composed += wxString::Format("    %s: %dx\n", maplist[l].mapname, list_sector[l * 65536 + w]);
 				}
 			}
 		}

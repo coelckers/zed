@@ -59,7 +59,7 @@ CZipFile::~CZipFile(void)
 {
 	for(unsigned int i=0;i<mapnames.Size ();i++)
 	{
-		free((void*)mapnames[i]);
+		free((void*)mapnames[i].mapname);
 	}
 	for(unsigned i=0;i<embeddedWADs.Size();i++)
 	{
@@ -264,7 +264,7 @@ void CZipFile::ReadDirectory(FileReader *wadinfo)
 
 		if (!strncmp(lump_p->fullname, "maps/", 5))
 		{
-			mapnames.Push(_strdup(lump_p->name));
+			mapnames.Push({ lumps.Size() - 1, _strdup(lump_p->name) });
 		}
 
 		// Entries in Zips are sorted alphabetically.
@@ -572,7 +572,7 @@ void * CZipFile::CreateInMemory(int * length)
 //
 //==========================================================================
 
-void CZipFile::GetMapList(TArray<const char *> & array)
+void CZipFile::GetMapList(TArray<MapRecord> & array)
 {
 	for(unsigned int i=0;i<mapnames.Size ();i++)
 	{

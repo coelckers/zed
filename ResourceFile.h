@@ -8,6 +8,12 @@
 struct C7zArchive;
 struct FZipCentralDirectoryInfo;
 
+struct MapRecord
+{
+	QWORD maplump;
+	const char* mapname;
+};
+
 //==========================================================================
 //
 //
@@ -21,7 +27,7 @@ protected:
 	char * m_Filename;
 	int m_NumLumps;
 
-	static void SortMapList(TArray<const char *> & array);
+	static void SortMapList(TArray<MapRecord> & array);
 public:
 	QWORD m_LumpStart;
 
@@ -36,7 +42,7 @@ public:
 	virtual void ReplaceLump(int lump, void * data, int length)=0;
 	virtual void Save(const char * filename)=0;
 	virtual void * CreateInMemory(int * length)=0;
-	virtual void GetMapList(TArray<const char *> & array) {}
+	virtual void GetMapList(TArray<MapRecord> & array) {}
 	virtual const char * GetLumpName(int lump)=0;
 	virtual const char * GetFullLumpName(int lump) { return NULL; }
 
@@ -89,7 +95,7 @@ public:
 	static void CloseResourceFiles();
 	static void SwitchIWAD(const char *newiwad);
 
-	static void GetMapList(const char * wad, TArray<const char *> & array);
+	static void GetMapList(const char * wad, TArray<MapRecord> & array);
 
 	static TArray<CResourceFile *> OpenFiles;
 };
@@ -121,7 +127,7 @@ public:
 	virtual void Save(const char * filename);
 	virtual void * CreateInMemory(int * length);
 	virtual const char * GetLumpName(int lump);
-	virtual void GetMapList(TArray<const char *> & array);
+	virtual void GetMapList(TArray<MapRecord> & array);
 };
 
 //==========================================================================
@@ -148,7 +154,7 @@ struct CWADLump
 class CWADFile : public CResourceFile
 {
 	TArray<CWADLump> lumps;
-	TArray<const char *> mapnames;
+	TArray<MapRecord> mapnames;
 	bool IWAD;
 	FILE * m_File;
 
@@ -165,7 +171,7 @@ public:
 	virtual void ReplaceLump(int lump, void * data, int length);
 	virtual void Save(const char * filename);
 	virtual void * CreateInMemory(int * length);
-	virtual void GetMapList(TArray<const char *> & array);
+	virtual void GetMapList(TArray<MapRecord> & array);
 	virtual const char * GetLumpName(int lump);
 	virtual void GetAllSprites(TArray<QWORD> & list);
 	virtual void GetAllFlats(TArray<QWORD> & list);
@@ -203,7 +209,7 @@ protected:
 	FileReader *fin;
 	TArray<LumpRecord> lumps;
 	TArray<CWADFile *> embeddedWADs;
-	TArray<const char *> mapnames;
+	TArray<MapRecord> mapnames;
 
 	virtual void ReadLump(LumpRecord *l, void *Ptr);
 
@@ -224,7 +230,7 @@ public:
 	virtual void ReplaceLump(int lump, void * data, int length);
 	virtual void Save(const char * filename);
 	virtual void * CreateInMemory(int * length);
-	virtual void GetMapList(TArray<const char *> & array);
+	virtual void GetMapList(TArray<MapRecord> & array);
 	virtual const char * GetLumpName(int lump);
 	virtual void GetAllSprites(TArray<QWORD> & list);
 	virtual void GetAllFlats(TArray<QWORD> & list);

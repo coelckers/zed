@@ -355,7 +355,7 @@ void CResourceFile::SwitchIWAD(const char *newiwad)
 //
 //==========================================================================
 
-void CResourceFile::GetMapList(const char * filename, TArray<const char *> & array)
+void CResourceFile::GetMapList(const char * filename, TArray<MapRecord> & array)
 {
 	for(unsigned i=0;i<OpenFiles.Size();i++) if (!stricmp(OpenFiles[i]->GetName(),filename))
 	{
@@ -365,8 +365,8 @@ void CResourceFile::GetMapList(const char * filename, TArray<const char *> & arr
 
 static int mapcmp(const void *a, const void *b)
 {
-	char * A = *(char**)a;
-	char * B = *(char**)b;
+	char * A = (char*)((MapRecord*)a)->mapname;
+	char * B = (char*)((MapRecord*)b)->mapname;
 
 	while (*A && *B)
 	{
@@ -389,7 +389,7 @@ static int mapcmp(const void *a, const void *b)
 }
 
 
-void CResourceFile::SortMapList(TArray<const char *> & array)
+void CResourceFile::SortMapList(TArray<MapRecord> & array)
 {
 	qsort(&array[0], array.Size(), sizeof(array[0]), mapcmp);
 }
