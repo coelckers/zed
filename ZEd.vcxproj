@@ -117,6 +117,8 @@
     <ClCompile Include="Edit-Sector.cpp" />
     <ClCompile Include="Edit-Things.cpp" />
     <ClCompile Include="files.cpp" />
+    <ClCompile Include="file_grp.cpp" />
+    <ClCompile Include="file_rff.cpp" />
     <ClCompile Include="GameConfig.cpp" />
     <ClCompile Include="GenericTriggerDialogs.cpp" />
     <ClCompile Include="GenericTriggers.cpp" />

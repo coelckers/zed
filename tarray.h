@@ -1,3 +1,4 @@
+#pragma once
 /*
 ** tarray.h
 ** Templated, automatically resizing array
@@ -30,34 +31,128 @@
 ** THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **---------------------------------------------------------------------------
 **
+** NOTE: TArray takes advantage of the assumption that the contained type is
+** able to be trivially moved. The definition of trivially movable by the C++
+** standard is more strict than the actual set of types that can be moved with
+** memmove. For example, FString uses non-trivial constructors/destructor in
+** order to maintain the reference count, but can be "safely" by passed if the
+** opaque destructor call is avoided. Similarly types like TArray itself which
+** only null the owning pointers when moving which can be skipped if the
+** destructor is not called.
+**
+** It is possible that with LTO TArray could be made safe for non-trivial types,
+** but we don't wish to rely on LTO to reach expected performance. The set of
+** types which can not be contained by TArray as a result of this choice is
+** actually extremely small.
+**
 */
 
-#ifndef __TARRAY_H__
-#define __TARRAY_H__
 
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 #include <new>
+#include <utility>
+#include <iterator>
 
-class FArchive;
+#if !defined(_WIN32)
+#include <inttypes.h>		// for intptr_t
+#else
+#include <stdint.h>			// for mingw
+#endif
 
+template<typename T> class TIterator : public std::iterator<std::random_access_iterator_tag, T>
+{
+public:
+	typedef typename TIterator::value_type value_type;
+	typedef typename TIterator::difference_type difference_type;
+	typedef typename TIterator::pointer pointer;
+	typedef typename TIterator::reference reference;
+	typedef typename TIterator::iterator_category iterator_category;
 
+	TIterator(T* ptr = nullptr) { m_ptr = ptr; }
 
-inline void *M_Malloc (size_t size) { return malloc(size); }
-inline void *M_Realloc (void *memblock, size_t size) { return realloc(memblock, size); }
-inline void M_Free (void *memblock) { free(memblock); }
+	// Comparison operators
+	bool operator==(const TIterator &other) const { return m_ptr == other.m_ptr; }
+	bool operator!=(const TIterator &other) const { return m_ptr != other.m_ptr; }
+	bool operator< (const TIterator &other) const { return m_ptr <  other.m_ptr; }
+	bool operator<=(const TIterator &other) const { return m_ptr <= other.m_ptr; }
+	bool operator> (const TIterator &other) const { return m_ptr >  other.m_ptr; }
+	bool operator>=(const TIterator &other) const { return m_ptr >= other.m_ptr; }
+
+	// Arithmetic operators
+	TIterator &operator++() { ++m_ptr; return *this; }
+	TIterator operator++(int) { pointer tmp = m_ptr; ++*this; return TIterator(tmp); }
+	TIterator &operator--() { --m_ptr; return *this; }
+	TIterator operator--(int) { pointer tmp = m_ptr; --*this; return TIterator(tmp); }
+	TIterator &operator+=(difference_type offset) { m_ptr += offset; return *this; }
+	TIterator operator+(difference_type offset) const { return TIterator(m_ptr + offset); }
+	friend TIterator operator+(difference_type offset, const TIterator &other) { return TIterator(offset + other.m_ptr); }
+	TIterator &operator-=(difference_type offset) { m_ptr -= offset; return *this; }
+	TIterator operator-(difference_type offset) const { return TIterator(m_ptr - offset); }
+	difference_type operator-(const TIterator &other) const { return m_ptr - other.m_ptr; }
+
+	// Random access operators
+	T& operator[](difference_type i) { return m_ptr[i]; }
+	const T& operator[](difference_type i) const { return m_ptr[i]; }
+
+	T &operator*() const { return *m_ptr; }
+	T* operator->() { return m_ptr; }
+
+protected:
+	T* m_ptr;
+};
 
 
 // TArray -------------------------------------------------------------------
+
+// Must match TArray's layout.
+struct FArray
+{
+	void *Array;
+	unsigned int Count;
+	unsigned int Most;
+};
 
 // T is the type stored in the array.
 // TT is the type returned by operator().
 template <class T, class TT=T>
 class TArray
 {
-	//template<class U, class UU> friend FArchive &operator<< (FArchive &arc, TArray<U,UU> &self);
-
 public:
+
+    typedef TIterator<T>                       iterator;
+    typedef TIterator<const T>                 const_iterator;
+	typedef T							value_type;
+
+    iterator begin()
+	{
+		return &Array[0];
+	}
+	const_iterator begin() const
+	{
+		return &Array[0];
+	}
+	const_iterator cbegin() const
+	{
+		return &Array[0];
+	}
+
+	iterator end()
+	{
+		return &Array[Count];
+	}
+	const_iterator end() const
+	{
+		return &Array[Count];
+	}
+	const_iterator cend() const
+	{
+		return &Array[Count];
+	}
+	
+	
+
 	////////
 	// This is a dummy constructor that does nothing. The purpose of this
 	// is so you can create a global TArray in the data segment that gets
@@ -78,17 +173,27 @@ public:
 		Count = 0;
 		Array = NULL;
 	}
-	TArray (int max)
+	explicit TArray (size_t max, bool reserve = false)
 	{
-		Most = max;
-		Count = 0;
-		Array = (T *)M_Malloc (sizeof(T)*max);
+		Most = (unsigned)max;
+		Count = (unsigned)(reserve? max : 0);
+		Array = (T *)malloc (sizeof(T)*max);
+		if (reserve && Count > 0)
+		{
+			ConstructEmpty(0, Count - 1);
+		}
 	}
-	TArray (const TArray<T> &other)
+	TArray (const TArray<T,TT> &other)
 	{
 		DoCopy (other);
 	}
-	TArray<T> &operator= (const TArray<T> &other)
+	TArray (TArray<T,TT> &&other)
+	{
+		Array = other.Array; other.Array = NULL;
+		Most = other.Most; other.Most = 0;
+		Count = other.Count; other.Count = 0;
+	}
+	TArray<T,TT> &operator= (const TArray<T,TT> &other)
 	{
 		if (&other != this)
 		{
@@ -98,10 +203,25 @@ public:
 				{
 					DoDelete (0, Count-1);
 				}
-				M_Free (Array);
+				free (Array);
 			}
 			DoCopy (other);
 		}
+		return *this;
+	}
+	TArray<T,TT> &operator= (TArray<T,TT> &&other)
+	{
+		if (Array)
+		{
+			if (Count > 0)
+			{
+				DoDelete (0, Count-1);
+			}
+			free (Array);
+		}
+		Array = other.Array; other.Array = NULL;
+		Most = other.Most; other.Most = 0;
+		Count = other.Count; other.Count = 0;
 		return *this;
 	}
 	~TArray ()
@@ -112,27 +232,126 @@ public:
 			{
 				DoDelete (0, Count-1);
 			}
-			M_Free (Array);
+			free (Array);
 			Array = NULL;
 			Count = 0;
 			Most = 0;
 		}
 	}
-	// Return a reference to an element
-	T &operator[] (unsigned int index) const
+	// Check equality of two arrays
+	bool operator==(const TArray<T> &other) const
 	{
+		if (Count != other.Count)
+		{
+			return false;
+		}
+		for (unsigned int i = 0; i < Count; ++i)
+		{
+			if (Array[i] != other.Array[i])
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+	// Return a reference to an element.
+	// Note that the asserts must let the element after the end pass because this gets frequently used as a sentinel pointer.
+	T &operator[] (size_t index) const
+	{
+		assert(index <= Count);
 		return Array[index];
 	}
 	// Returns the value of an element
-	TT operator() (unsigned int index) const
+	TT operator() (size_t index) const
 	{
+		assert(index <= Count);
 		return Array[index];
 	}
+	// Returns a reference to the last element
+	T &Last() const
+	{
+		return Array[Count-1];
+	}
+
+	// returns address of first element
+	T *Data() const
+	{
+		return &Array[0];
+	}
+
+    unsigned int Find(const T& item) const
+    {
+        unsigned int i;
+        for(i = 0;i < Count;++i)
+        {
+            if(Array[i] == item)
+                break;
+        }
+        return i;
+    }
+
+	template<class Func> 
+	unsigned int FindEx(Func compare) const
+	{
+		unsigned int i;
+		for (i = 0; i < Count; ++i)
+		{
+			if (compare(Array[i]))
+				break;
+		}
+		return i;
+	}
+
 	unsigned int Push (const T &item)
 	{
 		Grow (1);
 		::new((void*)&Array[Count]) T(item);
 		return Count++;
+	}
+
+	unsigned int Push(T &&item)
+	{
+		Grow(1);
+		::new((void*)&Array[Count]) T(std::move(item));
+		return Count++;
+	}
+
+	unsigned Append(const TArray<T> &item)
+	{
+		unsigned start = Count;
+
+		Grow(item.Size());
+		Count += item.Size();
+
+		for (unsigned i = 0; i < item.Size(); i++)
+		{
+			new(&Array[start + i]) T(item[i]);
+		}
+		return start;
+	}
+
+	unsigned Append(TArray<T> &&item)
+	{
+		unsigned start = Count;
+
+		Grow(item.Size());
+		Count += item.Size();
+
+		for (unsigned i = 0; i < item.Size(); i++)
+		{
+			new(&Array[start + i]) T(std::move(item[i]));
+		}
+		return start;
+	}
+
+	bool Pop ()
+	{
+		if (Count > 0)
+		{
+			Array[--Count].~T();
+			return true;
+		}
+		return false;
 	}
 	bool Pop (T &item)
 	{
@@ -151,10 +370,33 @@ public:
 			Array[index].~T();
 			if (index < --Count)
 			{
-				memmove (&Array[index], &Array[index+1], sizeof(T)*(Count - index));
+				// Cast to void to assume trivial move
+				memmove ((void*)&Array[index], (const void*)&Array[index+1], sizeof(T)*(Count - index));
 			}
 		}
 	}
+
+	void Delete (unsigned int index, int deletecount)
+	{
+		if (index + deletecount > Count)
+		{
+			deletecount = Count - index;
+		}
+		if (deletecount > 0)
+		{
+			for (int i = 0; i < deletecount; i++)
+			{
+				Array[index + i].~T();
+			}
+			Count -= deletecount;
+			if (index < Count)
+			{
+				// Cast to void to assume trivial move
+				memmove ((void*)&Array[index], (const void*)&Array[index+deletecount], sizeof(T)*(Count - index));
+			}
+		}
+	}
+
 	// Inserts an item into the array, shifting elements as needed
 	void Insert (unsigned int index, const T &item)
 	{
@@ -172,12 +414,14 @@ public:
 			Resize (Count + 1);
 
 			// Now move items from the index and onward out of the way
-			memmove (&Array[index+1], &Array[index], sizeof(T)*(Count - index - 1));
+			// Cast to void to assume trivial move
+			memmove ((void*)&Array[index+1], (const void*)&Array[index], sizeof(T)*(Count - index - 1));
 
 			// And put the new element in
 			::new ((void *)&Array[index]) T(item);
 		}
 	}
+
 	void ShrinkToFit ()
 	{
 		if (Most > Count)
@@ -187,7 +431,7 @@ public:
 			{
 				if (Array != NULL)
 				{
-					M_Free (Array);
+					free (Array);
 					Array = NULL;
 				}
 			}
@@ -216,10 +460,7 @@ public:
 		{
 			// Adding new entries
 			Grow (amount - Count);
-			for (unsigned int i = Count; i < amount; ++i)
-			{
-				::new((void *)&Array[i]) T;
-			}
+			ConstructEmpty(Count, amount - 1);
 		}
 		else if (Count != amount)
 		{
@@ -228,17 +469,34 @@ public:
 		}
 		Count = amount;
 	}
+	// Ensures that the array has at most amount entries.
+	// Useful in cases where the initial allocation may be larger than the final result.
+	// Resize would create a lot of unneeded code in those cases.
+	void Clamp(unsigned int amount)
+	{
+		if (Count > amount)
+		{
+			// Deleting old entries
+			DoDelete(amount, Count - 1);
+			Count = amount;
+		}
+	}
+	void Alloc(unsigned int amount)
+	{
+		// first destroys all content and then rebuilds the array.
+		if (Count > 0) DoDelete(0, Count - 1);
+		Count = 0;
+		Resize(amount);
+		ShrinkToFit();
+	}
 	// Reserves amount entries at the end of the array, but does nothing
 	// with them.
-	unsigned int Reserve (unsigned int amount)
+	unsigned int Reserve (size_t amount)
 	{
-		Grow (amount);
+		Grow ((unsigned)amount);
 		unsigned int place = Count;
-		Count += amount;
-		for (unsigned int i = place; i < Count; ++i)
-		{
-			::new((void *)&Array[i]) T;
-		}
+		Count += (unsigned)amount;
+		if (Count > 0) ConstructEmpty(place, Count - 1);
 		return place;
 	}
 	unsigned int Size () const
@@ -257,73 +515,42 @@ public:
 			Count = 0;
 		}
 	}
-
-	bool Exists(const T & cmp) const 
+	void Reset()
 	{
-		// Any object you want to check must have an operator== defined!
-		for (unsigned i = 0; i < Size(); i++)
+		Clear();
+		Most = 0;
+		if (Array != nullptr)
 		{
-			if (Array[i] == cmp) return true;
+			free(Array);
+			Array = nullptr;
 		}
-
-		return false;
 	}
 
-	bool Add(const T & item, bool no_dup=true)
+	void Swap(TArray<T, TT> &other)
 	{
-		if (no_dup && Exists(item)) return false;
+		std::swap(Array, other.Array);
+		std::swap(Count, other.Count);
+		std::swap(Most, other.Most);
+	}
+
+	bool Add(const T& item, bool no_dup = true)
+	{
+		if (no_dup && Find(item) < Size()) return false;
 		Push(item);
 		return true;
 	}
 
-	void AddList(TArray<T> & other, bool no_dup=true)
-	{
-		for (unsigned i = 0; i < other.Size(); i++) Add(other[i], no_dup);
-	}
-
-	int Find(const T & cmp)
-	{
-		for (unsigned i = 0; i < Size(); i++)
-		{
-			if (Array[i] == cmp) return i;
-		}
-
-		return -1;
-	}
-
-	int FindBackward(const T & cmp)
-	{
-		for (int i = Size()-1; i >= 0; i++)
-		{
-			if (Array[i] == cmp) return i;
-		}
-
-		return -1;
-	}
-
-	void Remove(const T & cmp)
-	{
-		int n = FindBackward(cmp);
-		if (n == -1) return;
-		Delete(n);
-	}
-
-	T & Last() 
-	{
-		return Array[Count-1];
-	}
-
 private:
 	T *Array;
-	unsigned int Most;
 	unsigned int Count;
+	unsigned int Most;
 
 	void DoCopy (const TArray<T> &other)
 	{
 		Most = Count = other.Count;
 		if (Count != 0)
 		{
-			Array = (T *)M_Malloc (sizeof(T)*Most);
+			Array = (T *)malloc (sizeof(T)*Most);
 			for (unsigned int i = 0; i < Count; ++i)
 			{
 				::new(&Array[i]) T(other.Array[i]);
@@ -338,7 +565,7 @@ private:
 	void DoResize ()
 	{
 		size_t allocsize = sizeof(T)*Most;
-		Array = (T *)M_Realloc (Array, allocsize);
+		Array = (T *)realloc (Array, allocsize);
 	}
 
 	void DoDelete (unsigned int first, unsigned int last)
@@ -349,6 +576,16 @@ private:
 			Array[i].~T();
 		}
 	}
+
+	void ConstructEmpty(unsigned int first, unsigned int last)
+	{
+		assert(last != ~0u);
+		for (unsigned int i = first; i <= last; ++i)
+		{
+			::new(&Array[i]) T;
+		}
+	}
+
 };
 
 // TDeletingArray -----------------------------------------------------------
@@ -357,13 +594,92 @@ template<class T, class TT=T>
 class TDeletingArray : public TArray<T, TT>
 {
 public:
+	TDeletingArray() : TArray<T,TT>() {}
+	TDeletingArray(TDeletingArray<T,TT> &&other) : TArray<T,TT>(std::move(other)) {}
+	TDeletingArray<T,TT> &operator=(TDeletingArray<T,TT> &&other)
+	{
+		TArray<T,TT>::operator=(std::move(other));
+		return *this;
+	}
+
 	~TDeletingArray<T, TT> ()
 	{
 		for (unsigned int i = 0; i < TArray<T,TT>::Size(); ++i)
 		{
-			delete (*this)[i];
+			if ((*this)[i] != NULL) 
+				delete (*this)[i];
 		}
 	}
+	void DeleteAndClear()
+	{
+		for (unsigned int i = 0; i < TArray<T,TT>::Size(); ++i)
+		{
+			if ((*this)[i] != NULL) 
+				delete (*this)[i];
+		}
+		this->Clear();
+	}
+};
+
+// This is only used for exposing the sector's Lines array to ZScript.
+// Unlike TArrayView, its members are public as needed by the map loader.
+
+template <class T>
+class TStaticPointedArray
+{
+public:
+
+	typedef TIterator<T>                       iterator;
+	typedef TIterator<const T>                 const_iterator;
+	typedef T                                  value_type;
+
+	iterator begin()
+	{
+		return &Array[0];
+	}
+	const_iterator begin() const
+	{
+		return &Array[0];
+	}
+	const_iterator cbegin() const
+	{
+		return &Array[0];
+	}
+
+	iterator end()
+	{
+		return &Array[Count];
+	}
+	const_iterator end() const
+	{
+		return &Array[Count];
+	}
+	const_iterator cend() const
+	{
+		return &Array[Count];
+	}
+
+	void Init(T *ptr, unsigned cnt)
+	{
+		Array = ptr;
+		Count = cnt;
+	}
+	// Return a reference to an element
+	T &operator[] (size_t index) const
+	{
+		return Array[index];
+	}
+	T &At(size_t index) const
+	{
+		return Array[index];
+	}
+	unsigned int Size() const
+	{
+		return Count;
+	}
+	// Some code needs to access these directly so they cannot be private.
+	T *Array;
+	unsigned int Count;
 };
 
 // TAutoGrowArray -----------------------------------------------------------
@@ -433,21 +749,61 @@ typedef unsigned int hash_t;
 template<class KT> struct THashTraits
 {
 	// Returns the hash value for a key.
-	hash_t Hash(const KT key) { return hash_t(key); }
+	hash_t Hash(const KT key) { return (hash_t)(intptr_t)key; }
+	hash_t Hash(double key)
+	{
+		hash_t keyhash[2];
+		memcpy(&keyhash, &key, sizeof(keyhash));
+		return keyhash[0] ^ keyhash[1];
+	}
 
 	// Compares two keys, returning zero if they are the same.
 	int Compare(const KT left, const KT right) { return left != right; }
 };
 
+template<> struct THashTraits<float>
+{
+	// Use all bits when hashing singles instead of converting them to ints.
+	hash_t Hash(float key)
+	{
+		hash_t keyhash;
+		memcpy(&keyhash, &key, sizeof(keyhash));
+		return keyhash;
+	}
+	int Compare(float left, float right) { return left != right; }
+};
+
+template<> struct THashTraits<double>
+{
+	// Use all bits when hashing doubles instead of converting them to ints.
+	hash_t Hash(double key)
+	{
+		hash_t keyhash[2];
+		memcpy(&keyhash, &key, sizeof(keyhash));
+		return keyhash[0] ^ keyhash[1];
+	}
+	int Compare(double left, double right) { return left != right; }
+};
+
 template<class VT> struct TValueTraits
 {
-	// Initializes a value for TMap. If a regular consructor isn't
+	// Initializes a value for TMap. If a regular constructor isn't
 	// good enough, you can override it.
 	void Init(VT &value)
 	{
 		::new(&value) VT;
 	}
 };
+
+// Must match layout of TMap
+struct FMap
+{
+	void *Nodes;
+	void *LastFree;
+	hash_t Size;
+	hash_t NumUsed;
+};
+
 
 template<class KT, class VT, class MapType> class TMapIterator;
 template<class KT, class VT, class MapType> class TMapConstIterator;
@@ -483,6 +839,37 @@ public:
 		SetNodeVector(o.CountUsed());
 		CopyNodes(o.Nodes, o.Size);
 		return *this;
+	}
+
+	//=======================================================================
+	//
+	// TransferFrom
+	//
+	// Moves the contents from one TMap to another, leaving the TMap moved
+	// from empty.
+	//
+	//=======================================================================
+
+	void TransferFrom(TMap &o)
+	{
+		// Clear all our nodes.
+		NumUsed = 0;
+		ClearNodeVector();
+
+		// Copy all of o's nodes.
+		Nodes = o.Nodes;
+		LastFree = o.LastFree;
+		Size = o.Size;
+		NumUsed = o.NumUsed;
+
+		// Tell o it doesn't have any nodes.
+		o.Nodes = NULL;
+		o.Size = 0;
+		o.LastFree = NULL;
+		o.NumUsed = 0;
+
+		// Leave o functional with one empty node.
+		o.SetNodeVector(1);
 	}
 
 	//=======================================================================
@@ -592,6 +979,36 @@ public:
 		return n->Pair.Value;
 	}
 
+	VT &Insert(const KT key, VT &&value)
+	{
+		Node *n = FindKey(key);
+		if (n != NULL)
+		{
+			n->Pair.Value = value;
+		}
+		else
+		{
+			n = NewKey(key);
+			::new(&n->Pair.Value) VT(value);
+		}
+		return n->Pair.Value;
+	}
+
+	VT &InsertNew(const KT key)
+	{
+		Node *n = FindKey(key);
+		if (n != NULL)
+		{
+			n->Pair.Value.~VT();
+		}
+		else
+		{
+			n = NewKey(key);
+		}
+		::new(&n->Pair.Value) VT;
+		return n->Pair.Value;
+	}
+
 	//=======================================================================
 	//
 	// Remove
@@ -603,6 +1020,14 @@ public:
 	void Remove(const KT key)
 	{
 		DelKey(key);
+	}
+
+	void Swap(MyType &other)
+	{
+		std::swap(Nodes, other.Nodes);
+		std::swap(LastFree, other.LastFree);
+		std::swap(Size, other.Size);
+		std::swap(NumUsed, other.NumUsed);
 	}
 
 protected:
@@ -652,7 +1077,7 @@ protected:
 		// Round size up to nearest power of 2
 		for (Size = 1; Size < size; Size <<= 1)
 		{ }
-		Nodes = (Node *)M_Malloc(Size * sizeof(Node));
+		Nodes = (Node *)malloc(Size * sizeof(Node));
 		LastFree = &Nodes[Size];	/* all positions are free */
 		for (hash_t i = 0; i < Size; ++i)
 		{
@@ -669,7 +1094,7 @@ protected:
 				Nodes[i].~Node();
 			}
 		}
-		M_Free(Nodes);
+		free(Nodes);
 		Nodes = NULL;
 		Size = 0;
 		LastFree = NULL;
@@ -689,11 +1114,11 @@ protected:
 			if (!nold[i].IsNil())
 			{
 				Node *n = NewKey(nold[i].Pair.Key);
-				::new(&n->Pair.Value) VT(nold[i].Pair.Value);
+				::new(&n->Pair.Value) VT(std::move(nold[i].Pair.Value));
 				nold[i].~Node();
 			}
 		}
-		M_Free(nold);
+		free(nold);
 	}
 
 	void Rehash()
@@ -766,7 +1191,11 @@ protected:
 		Node *mp = MainPosition(key), **mpp;
 		HashTraits Traits;
 
-		if (!mp->IsNil() && !Traits.Compare(mp->Pair.Key, key)) /* the key is in its main position */
+		if (mp->IsNil())
+		{
+			/* the key is definitely not present, because there is nothing at its main position */
+		}
+		else if (!Traits.Compare(mp->Pair.Key, key)) /* the key is in its main position */
 		{
 			if (mp->Next != NULL)		/* move next node to its main position */
 			{
@@ -944,4 +1373,286 @@ protected:
 	hash_t Position;
 };
 
-#endif //__TARRAY_H__
+
+
+//==========================================================================
+//
+// an array to hold a small number of unique entries
+//
+//==========================================================================
+
+template<class T> class UniqueList
+{
+	TArray<T*> Array;
+
+public:
+
+	T * Get(T * t)
+	{
+		for (unsigned i = 0; i<Array.Size(); i++)
+		{
+			if (!memcmp(t, Array[i], sizeof(T))) return Array[i];
+		}
+		auto newo = new T(*t);
+		Array.Push(newo);
+		return newo;
+	}
+
+	void Clear()
+	{
+		for (unsigned i = 0; i<Array.Size(); i++) delete Array[i];
+		Array.Clear();
+	}
+
+	~UniqueList()
+	{
+		Clear();
+	}
+};
+
+
+class BitArray
+{
+	TArray<uint8_t> bytes;
+	unsigned size;
+
+public:
+	void Resize(unsigned elem)
+	{
+		bytes.Resize((elem + 7) / 8);
+		size = elem;
+	}
+
+	BitArray() : size(0)
+	{
+	}
+
+	BitArray(unsigned elem)
+		: bytes((elem + 7) / 8, true)
+	{
+
+	}
+
+	BitArray(const BitArray & arr)
+		: bytes(arr.bytes)
+	{
+		size = arr.size;
+	}
+
+	BitArray &operator=(const BitArray & arr)
+	{
+		bytes = arr.bytes;
+		size = arr.size;
+		return *this;
+	}
+
+	BitArray(BitArray && arr)
+		: bytes(std::move(arr.bytes))
+	{
+		size = arr.size;
+		arr.size = 0;
+	}
+
+	BitArray &operator=(BitArray && arr)
+	{
+		bytes = std::move(arr.bytes);
+		size = arr.size;
+		arr.size = 0;
+		return *this;
+	}
+
+	bool operator[](size_t index) const
+	{
+		return !!(bytes[index >> 3] & (1 << (index & 7)));
+	}
+
+	void Set(size_t index, bool set = true)
+	{
+		if (!set) Clear(index);
+		else bytes[index >> 3] |= (1 << (index & 7));
+	}
+
+	void Clear(size_t index)
+	{
+		bytes[index >> 3] &= ~(1 << (index & 7));
+	}
+
+	unsigned Size() const
+	{
+		return size;
+	}
+
+	void Zero()
+	{
+		memset(&bytes[0], 0, bytes.Size());
+	}
+};
+
+
+template<int size>
+class FixedBitArray
+{
+	uint8_t bytes[(size + 7) / 8];
+
+public:
+
+	FixedBitArray() = default;
+	FixedBitArray(bool set)
+	{
+		memset(bytes, set ? -1 : 0, sizeof(bytes));
+	}
+
+	bool operator[](size_t index) const
+	{
+		return !!(bytes[index >> 3] & (1 << (index & 7)));
+	}
+
+	void Set(size_t index, bool set = true)
+	{
+		if (!set) Clear(index);
+		else bytes[index >> 3] |= (1 << (index & 7));
+	}
+
+	void Clear(size_t index)
+	{
+		bytes[index >> 3] &= ~(1 << (index & 7));
+	}
+
+	constexpr unsigned Size() const
+	{
+		return size;
+	}
+
+	void Zero()
+	{
+		memset(&bytes[0], 0, sizeof(bytes));
+	}
+
+	void SetAll(bool on)
+	{
+		memset(&bytes[0], on ? -1 : 0, sizeof(bytes));
+	}
+
+	// These are for utilities that need access to the raw storage. The serializer needs this to do its work, for example.
+	uint8_t* Storage()
+	{
+		return bytes;
+	}
+	unsigned StorageSize() const
+	{
+		return sizeof(bytes);
+	}
+};
+
+// A wrapper to externally stored data.
+// I would have expected something for this in the stl, but std::span is only in C++20.
+template <class T>
+class TArrayView
+{
+public:
+
+	typedef TIterator<T>                       iterator;
+	typedef TIterator<const T>                 const_iterator;
+	typedef T                                  value_type;
+
+	iterator begin()
+	{
+		return &Array[0];
+	}
+	const_iterator begin() const
+	{
+		return &Array[0];
+	}
+	const_iterator cbegin() const
+	{
+		return &Array[0];
+	}
+
+	iterator end()
+	{
+		return &Array[Count];
+	}
+	const_iterator end() const
+	{
+		return &Array[Count];
+	}
+	const_iterator cend() const
+	{
+		return &Array[Count];
+	}
+
+
+	////////
+	TArrayView() = default;	// intended to keep this type trivial.
+	TArrayView(T *data, unsigned count = 0)
+	{
+		Count = count;
+		Array = data;
+	}
+	TArrayView(const TArrayView<T> &other) = default;
+	TArrayView<T> &operator= (const TArrayView<T> &other) = default;
+
+	// Check equality of two arrays
+	bool operator==(const TArrayView<T> &other) const
+	{
+		if (Count != other.Count)
+		{
+			return false;
+		}
+		for (unsigned int i = 0; i < Count; ++i)
+		{
+			if (Array[i] != other.Array[i])
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+	// Return a reference to an element
+	T &operator[] (size_t index) const
+	{
+		return Array[index];
+	}
+	// Returns a reference to the last element
+	T &Last() const
+	{
+		return Array[Count - 1];
+	}
+
+	// returns address of first element
+	T *Data() const
+	{
+		return &Array[0];
+	}
+
+	unsigned Size() const
+	{
+		return Count;
+	}
+
+	unsigned int Find(const T& item) const
+	{
+		unsigned int i;
+		for (i = 0; i < Count; ++i)
+		{
+			if (Array[i] == item)
+				break;
+		}
+		return i;
+	}
+
+	void Set(T *data, unsigned count)
+	{
+		Array = data;
+		Count = count;
+	}
+
+	void Clear()
+	{
+		Count = 0;
+		Array = nullptr;
+	}
+private:
+	T *Array;
+	unsigned int Count;
+};

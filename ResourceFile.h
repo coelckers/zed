@@ -186,6 +186,107 @@ public:
 //
 //==========================================================================
 
+struct GrpEntry
+{
+	char		Name[12];
+	DWORD		Size;
+};
+
+struct CGrpLump
+{
+	char		name[13];
+	DWORD		length;
+	DWORD 		offset;
+	char *		data;
+};
+
+class CGrpFile : public CResourceFile
+{
+	TArray<CGrpLump> lumps;
+	TArray<MapRecord> mapnames;
+	bool IWAD;
+	FILE * m_File;
+
+public:
+	CGrpFile(const char * filename);
+	~CGrpFile(void);
+
+	virtual int FindLump(const char * name);
+	virtual void FindLumps(const char * name, TArray<QWORD> & list);
+	virtual int GetLumpSize(int lump);
+	virtual void * ReadLump(int lump);
+	virtual void ReadLump(int lump, void * buffer);
+	virtual void ReplaceLump(int lump, void * data, int length);
+	virtual void Save(const char * filename);
+	virtual void * CreateInMemory(int * length);
+	virtual void GetMapList(TArray<MapRecord> & array);
+	virtual const char * GetLumpName(int lump);
+
+};
+
+
+struct RFFInfo
+{
+	// Should be "RFF\x18"
+	uint32_t		Magic;
+	uint32_t		Version;
+	uint32_t		DirOfs;
+	uint32_t		NumLumps;
+};
+
+struct RFFLump
+{
+	uint32_t		DontKnow1[4];
+	uint32_t		FilePos;
+	uint32_t		Size;
+	uint32_t		DontKnow2;
+	uint32_t		Time;
+	uint8_t		Flags;
+	char		Extension[3];
+	char		Name[8];
+	uint32_t		IndexNum;	// Used by .sfx, possibly others
+};
+ 
+struct CRffLump
+{
+	char		name[13];
+	bool		encrypted;
+	DWORD		length;
+	DWORD 		offset;
+	char* data;
+};
+
+class CRffFile : public CResourceFile
+{
+	TArray<CRffLump> lumps;
+	TArray<MapRecord> mapnames;
+	bool IWAD;
+	FILE* m_File;
+
+public:
+	CRffFile(const char* filename);
+	~CRffFile(void);
+
+	virtual int FindLump(const char* name);
+	virtual void FindLumps(const char* name, TArray<QWORD>& list);
+	virtual int GetLumpSize(int lump);
+	virtual void* ReadLump(int lump);
+	virtual void ReadLump(int lump, void* buffer);
+	virtual void ReplaceLump(int lump, void* data, int length);
+	virtual void Save(const char* filename);
+	virtual void* CreateInMemory(int* length);
+	virtual void GetMapList(TArray<MapRecord>& array);
+	virtual const char* GetLumpName(int lump);
+
+};
+
+
+//==========================================================================
+//
+//
+//
+//==========================================================================
+
 //
 // WADFILE I/O related stuff.
 //

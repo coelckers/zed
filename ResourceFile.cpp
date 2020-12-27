@@ -243,6 +243,14 @@ void CResourceFile::AddResourceFile(const char * filename)
 		{
 			resf = new  C7zFile(filename);
 		}
+		else if (!memcmp(id, "KenS", 4))
+		{
+			resf = new CGrpFile(filename);
+		}
+		else if (!memcmp(id, "RFF\x1a", 4))
+		{
+			resf = new CRffFile(filename);
+		}
 		else
 		{
 			resf = new  CSingleLump(filename);

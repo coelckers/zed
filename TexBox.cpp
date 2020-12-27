@@ -103,6 +103,7 @@ void TextureBox::OnPaint(wxPaintEvent &event)
 			sz.y = newdraw;
 		}
 
+		// This shit is quite broken in wxWidgets. Apparently I hacked the framework to draw this scaled back in the day but that code is lost. :(
 		float scalex = (float)width/sz.x;
 		float scaley = (float)height/sz.y;
 		float scale = max(scalex, scaley);
