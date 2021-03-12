@@ -9,7 +9,9 @@
 #include "Infobars.h"
 #include "doomerrors.h"
 
-#define ZED_CAPTION "ZEd 2.1"
+#define ZED_CAPTION "ZEd 2.2"
+
+wxString GetConfigDir();
 
 
 // Global commands

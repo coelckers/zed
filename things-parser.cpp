@@ -17,6 +17,7 @@
 // DECORATE parser
 
 #include "StdAfx.h"
+#include "ZEd.h"
 #include "ResourceFile.h"
 #include "GameConfig.h"
 #include "sc_man.h"
@@ -460,17 +461,13 @@ void GameConfig::ProcessMobjScript(QWORD lump,wxMenu * hm)
 void GameConfig::ParseDefThings()
 {
 	ScriptMan sc;
-	char ini[256];
 	int stat;
 	int flags;
 	char * penname;
 
-	GetModuleFileName(NULL,ini,256);
-	char * p=strrchr(ini,'\\');
-	if (p) strcpy(p+1,"configs/items.itm");
-	else strcat(ini,"configs/items.itm");
+	auto fn = GetConfigDir() + "items.itm";
 
-	sc.SC_OpenFile(ini);
+	sc.SC_OpenFile(fn);
 	while (sc.SC_GetString())
 	{
 		if (sc.SC_Compare("Friendlies"))

@@ -72,24 +72,11 @@ static void ParseColor(ScriptMan & sc)
 bool ParseColors()
 {
 	ScriptMan sc("{}|=,");
+	wxString fn = GetConfigDir() + "colors.cfg";
 
 	try
 	{
-		wxString path, name;
-		wxFileName ini;
-
-		bool isdir = false;
-
-		if (DirEntryExists("configs/colors.cfg", &isdir) && !isdir)
-		{
-			sc.SC_OpenFile("configs/colors.cfg");
-		}
-		else
-		{
-			wxFileName::SplitPath(wxString(wxGetApp().argv[0]), &path, &name, NULL);
-			ini.Assign(path, "configs/colors", "cfg");
-			sc.SC_OpenFile(ini.GetLongPath().c_str());
-		}
+		sc.SC_OpenFile(fn);
 
 		if (!sc.SC_GetString())
 		{
@@ -964,13 +951,12 @@ void GameConfig::ParseSectors(ScriptMan & sc, bool discard)
 bool GameConfig::ParseConfig(wxString config, bool things, bool keys, bool lines, bool sides, bool sectors, bool argtypes)
 {
 	ScriptMan sc;
-	char buffer[256];
 	bool thisfile_extended = false;
 	bool parseall = things && keys && lines && sectors && sides;
 
-	sprintf(buffer,"configs/%s", config.c_str());
+	wxString fn = GetConfigDir() + config;
 
-	sc.SC_OpenFile(buffer);
+	sc.SC_OpenFile(fn);
 
 	if (!sc.SC_GetString())
 	{

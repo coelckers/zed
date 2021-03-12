@@ -266,6 +266,14 @@ void CZipFile::ReadDirectory(FileReader *wadinfo)
 		{
 			mapnames.Push({ lumps.Size() - 1, _strdup(lump_p->name) });
 		}
+		else
+		{
+			char* c = strstr(name, ".map");
+			if (c && strlen(c) == 4 && !strchr(name, '/'))
+			{
+				mapnames.Push({ lumps.Size() - 1, _strdup(lump_p->name) });
+			}
+		}
 
 		// Entries in Zips are sorted alphabetically.
 		//qsort(&LumpInfo[startlump], NumLumps - startlump, sizeof(LumpRecord), lumpcmp);

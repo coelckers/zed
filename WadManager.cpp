@@ -22,6 +22,7 @@
 #include "configfile.h"
 #include "sc_man.h"
 #include "GameConfig.h"
+#include "cmdlib.h"
 
 
 //==========================================================================
@@ -249,13 +250,15 @@ void CWadManager::MakeConfigList()
 {
 	wxDir dir;
 
-	if (dir.Open("./configs/"))
+	wxString fn = GetConfigDir();
+
+	if (dir.Open(fn))
 	{
 		wxString filename;
 
 		for(bool cont = dir.GetFirst(&filename, "*.cfg"); cont = dir.GetNext(&filename); )
 		{
-			wxString path = "configs/" + filename;
+			wxString path = fn + filename;
 
 			ScriptMan sc;
 

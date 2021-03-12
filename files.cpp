@@ -520,3 +520,81 @@ char *MemoryReader::Gets(char *strbuf, int len)
 {
 	return GetsFromBuffer(bufptr, strbuf, len);
 }
+
+//==========================================================================
+//
+// FileWriter (the motivation here is to have a buffer writing subclass)
+//
+//==========================================================================
+
+bool FileWriter::OpenDirect(const char *filename)
+{
+	File = fopen(filename, "wb");
+	return (File != NULL);
+}
+
+FileWriter *FileWriter::Open(const char *filename)
+{
+	FileWriter *fwrit = new FileWriter();
+	if (fwrit->OpenDirect(filename))
+	{
+		return fwrit;
+	}
+	delete fwrit;
+	return NULL;
+}
+
+size_t FileWriter::Write(const void *buffer, size_t len)
+{
+	if (File != NULL)
+	{
+		return fwrite(buffer, 1, len, File);
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+long FileWriter::Tell()
+{
+	if (File != NULL)
+	{
+		return ftell(File);
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+long FileWriter::Seek(long offset, int mode)
+{
+	if (File != NULL)
+	{
+		return fseek(File, offset, mode);
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+size_t FileWriter::Printf(const char *fmt, ...)
+{
+	va_list ap;
+	static char writebuffer[2048];
+
+	va_start(ap, fmt);
+	vsnprintf(writebuffer, 2048, fmt, ap);
+	va_end(ap);
+	return Write(writebuffer, strlen(writebuffer));
+	return 0;
+}
+
+size_t BufferWriter::Write(const void *buffer, size_t len)
+{
+	unsigned int ofs = mBuffer.Reserve((unsigned)len);
+	memcpy(&mBuffer[ofs], buffer, len);
+	return len;
+}

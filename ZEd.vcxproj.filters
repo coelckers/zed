@@ -339,6 +339,12 @@
     <ClCompile Include="file_rff.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="BuildToUDMF.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="maploader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="configfile.h">
@@ -520,6 +526,9 @@
     </ClInclude>
     <ClInclude Include="cmdlib.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="buildtypes.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

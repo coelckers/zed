@@ -103,6 +103,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="7zFile.cpp" />
+    <ClCompile Include="BuildToUDMF.cpp" />
     <ClCompile Include="Clipboard.cpp" />
     <ClCompile Include="cmdlib.cpp" />
     <ClCompile Include="configfile.cpp">
@@ -144,6 +145,7 @@
     <ClCompile Include="Level-Undo.cpp" />
     <ClCompile Include="Level.cpp" />
     <ClCompile Include="Map.cpp" />
+    <ClCompile Include="maploader.cpp" />
     <ClCompile Include="name.cpp" />
     <ClCompile Include="NumberInput.cpp" />
     <ClCompile Include="Preferences.cpp" />
@@ -410,6 +412,7 @@
     <ClCompile Include="zstring.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="buildtypes.h" />
     <ClInclude Include="cmdlib.h" />
     <ClInclude Include="configfile.h" />
     <ClInclude Include="doomerrors.h" />

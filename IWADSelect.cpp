@@ -18,6 +18,7 @@
 
 #include "stdafx.h"
 #include "sc_man.h"
+#include "cmdlib.h"
 #include "ZEd.h"
 
 
@@ -112,15 +113,18 @@ void CIWADSelect::GetWADs()
 {
 	wxDir dir;
 	int i=0;
+	bool isdir = false;
+	wxString fn = GetConfigDir();
 
-	if (dir.Open("./configs/"))
+
+	if (dir.Open(fn))
 	{
 		wxString filename;
 
 		config.SetSection("IWADs", true);
 		for(bool cont = dir.GetFirst(&filename, "*.cfg"); cont = dir.GetNext(&filename); )
 		{
-			wxString path = "configs/" + filename;
+			wxString path = fn + filename;
 
 			ScriptMan sc;
 

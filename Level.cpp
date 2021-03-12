@@ -428,6 +428,12 @@ void CLevel::Load(QWORD lump, const char * mapname)
 			m_TextMap = true;
 			LoadTextMap(mapname, mapfile, mapindex);
 		}
+		else if (strstr(lump_name, ".map"))
+		{
+			cgc = confman.GetConfig(CurrentConfig + ".cfg");
+			m_TextMap = true;
+			LoadBuildMap(mapname, mapfile, mapindex);
+		}
 		else
 		{
 			I_Error("%s: Not a valid map.", mapname);
@@ -442,21 +448,52 @@ void CLevel::Load(QWORD lump, const char * mapname)
 	m_changed=false;
 }
 
-void CLevel::LoadTextMap(const char *mapname, CResourceFile *mapfile, int index)
+void CLevel::LoadTextMap(const char* mapname, CResourceFile* mapfile, int index)
 {
-	TArray<CSideDef> sides;
 	try
 	{
 		m_FraggleScript.Resize(mapfile->GetLumpSize(index));
 		mapfile->ReadLump(index, &m_FraggleScript[0]);
 		index++;
 
-		m_Bounds.bottom=m_Bounds.right=-32767;
-		m_Bounds.top=m_Bounds.left=32767;
+		char* textlump = (char*)mapfile->ReadLump(index);
+		LoadTextMap(textlump, mapfile->GetLumpSize(index));
+	}
+	catch (...)
+	{
+	}
+}
 
-		char *textlump = (char*)mapfile->ReadLump(index);
+void ConvertBuildMap(FileReader& fr, FileWriter* fw);
+
+void CLevel::LoadBuildMap(const char* mapname, CResourceFile* mapfile, int index)
+{
+	try
+	{
+		m_FraggleScript.Resize(0);
+
+		char* textlump = (char*)mapfile->ReadLump(index);
+		MemoryReader fr(textlump, mapfile->GetLumpSize(index));
+		BufferWriter fw;
+		ConvertBuildMap(fr, &fw);
+		auto buf = fw.GetBuffer();
+		LoadTextMap((char*)buf->Data(), buf->Size());
+	}
+	catch (...)
+	{
+	}
+}
+
+void CLevel::LoadTextMap(char* textlump, int size)
+{
+	TArray<CSideDef> sides;
+	try
+	{
+		m_Bounds.bottom = m_Bounds.right = -32767;
+		m_Bounds.top = m_Bounds.left = 32767;
+
 		ScriptMan sc("{}=;");
-		sc.SC_OpenMem("textmap", textlump, mapfile->GetLumpSize(index));
+		sc.SC_OpenMem("textmap", textlump, size);
 		while (sc.SC_GetString())
 		{
 			if (sc.SC_Compare("namespace"))
@@ -571,7 +608,7 @@ void CLevel::ParseThing(ScriptMan &sc, CThing *th)
 			break;
 
 		default:
-			if ((flagval = cgc->CheckTextMapThingFlag(key))>=0)
+			if (cgc && (flagval = cgc->CheckTextMapThingFlag(key))>=0)
 			{
 				if (sc.tkBool(key))
 					th->Flags.SetBit(flagval);
@@ -687,7 +724,7 @@ void CLevel::ParseLinedef(ScriptMan &sc, CLineDef *ld)
 			break;
 
 		default:
-			if ((flagval = cgc->CheckTextMapLineFlag(key))>=0)
+			if (cgc && (flagval = cgc->CheckTextMapLineFlag(key))>=0)
 			{
 				if (sc.tkBool(key))
 					ld->Flags.SetBit(flagval);
@@ -834,11 +871,11 @@ void CLevel::ParseSector(ScriptMan &sc, CSector *se)
 		switch(key)
 		{
 		case NAME_Heightfloor:
-			se->floorh = sc.tkInt(key);
+			se->floorh = (int)sc.tkFloat(key);
 			break;
 
 		case NAME_Heightceiling:
-			se->ceilh = sc.tkInt(key);
+			se->ceilh = (int)sc.tkFloat(key);
 			break;
 
 		case NAME_Texturefloor:

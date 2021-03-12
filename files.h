@@ -6,6 +6,7 @@
 #include "zip/bzip2/bzlib.h"
 #include "zip/lzma/c/LzmaDec.h"
 #include "doomtype.h"
+#include "tarray.h"
 #include "m_swap.h"
 
 class FileReader
@@ -63,6 +64,76 @@ public:
 		return *this;
 	}
 
+	uint8_t ReadUInt8()
+	{
+		uint8_t v = 0;
+		Read(&v, 1);
+		return v;
+	}
+
+	int8_t ReadInt8()
+	{
+		int8_t v = 0;
+		Read(&v, 1);
+		return v;
+	}
+
+	uint16_t ReadUInt16()
+	{
+		uint16_t v = 0;
+		Read(&v, 2);
+		return LittleShort(v);
+	}
+
+	int16_t ReadInt16()
+	{
+		int16_t v = 0;
+		Read(&v, 2);
+		return LittleShort(v);
+	}
+
+	int16_t ReadInt16BE()
+	{
+		int16_t v = 0;
+		Read(&v, 2);
+		return BigShort(v);
+	}
+
+	uint32_t ReadUInt32()
+	{
+		uint32_t v = 0;
+		Read(&v, 4);
+		return LittleLong(v);
+	}
+
+	int32_t ReadInt32()
+	{
+		int32_t v = 0;
+		Read(&v, 4);
+		return LittleLong(v);
+	}
+
+	uint32_t ReadUInt32BE()
+	{
+		uint32_t v = 0;
+		Read(&v, 4);
+		return BigLong(v);
+	}
+
+	int32_t ReadInt32BE()
+	{
+		int32_t v = 0;
+		Read(&v, 4);
+		return BigLong(v);
+	}
+
+	uint64_t ReadUInt64()
+	{
+		uint64_t v = 0;
+		Read(&v, 8);
+		// Prove to me that there's a relevant 64 bit Big Endian architecture and I fix this! :P
+		return v;
+	}
 
 protected:
 	FileReader (const FileReader &other, long length);
@@ -282,6 +353,53 @@ public:
 
 protected:
 	const char * bufptr;
+};
+
+class FileWriter
+{
+protected:
+	bool OpenDirect(const char* filename);
+
+public:
+	FileWriter(FILE* f = nullptr) // if passed, this writer will take over the file.
+	{
+		File = f;
+	}
+	virtual ~FileWriter()
+	{
+		Close();
+	}
+
+	static FileWriter* Open(const char* filename);
+
+	virtual size_t Write(const void* buffer, size_t len);
+	virtual long Tell();
+	virtual long Seek(long offset, int mode);
+	size_t Printf(const char* fmt, ...) GCCPRINTF(2, 3);
+	virtual void Close()
+	{
+		if (File != NULL) fclose(File);
+		File = nullptr;
+	}
+
+protected:
+
+	FILE* File;
+
+protected:
+	bool CloseOnDestruct;
+};
+
+class BufferWriter : public FileWriter
+{
+protected:
+	TArray<unsigned char> mBuffer;
+public:
+
+	BufferWriter() {}
+	virtual size_t Write(const void* buffer, size_t len) override;
+	TArray<unsigned char>* GetBuffer() { return &mBuffer; }
+	TArray<unsigned char>&& TakeBuffer() { return std::move(mBuffer); }
 };
 
 

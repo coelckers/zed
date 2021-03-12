@@ -289,7 +289,9 @@ class CLevel : public wxEvtHandler
 	wxColour hpCy,hpYe;
 	wxColour hpLr;
 
+	void LoadTextMap(char* textlump, int size);
 	void LoadTextMap(const char *mapname, CResourceFile *mapfile, int index);
+	void LoadBuildMap(const char* mapname, CResourceFile* mapfile, int index);
 	void ParseThing(ScriptMan &sc, CThing *th);
 	void ParseVertex(ScriptMan &sc, CVertex *vt);
 	void ParseLinedef(ScriptMan &sc, CLineDef *ld);

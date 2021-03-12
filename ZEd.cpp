@@ -45,6 +45,23 @@ void I_Error (const char *error, ...)
     throw CRecoverableError (errmsg);
 }
 
+
+wxString GetConfigDir()
+{
+	wxString path, name;
+	bool isdir = false;
+
+	if (DirEntryExists("configs/colors.cfg", &isdir) && !isdir)
+	{
+		return "configs/";
+	}
+	else
+	{
+		wxFileName::SplitPath(wxString(wxGetApp().argv[0]), &path, &name, NULL);
+		return path + "/configs/";
+	}
+}
+
 //==========================================================================
 //
 //
