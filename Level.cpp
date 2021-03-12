@@ -395,7 +395,7 @@ void CLevel::Load(QWORD lump, const char * mapname)
 	m_Mission[8]=0;
 
 	lump_name = CResourceFile::GlobalGetFullLumpName(lump);
-	if (lump_name && !strnicmp(lump_name, "maps/", 5))
+	if (lump_name && !strnicmp(lump_name, "maps/", 5) && !strstr(lump_name, ".map"))
 	{
 		size = CResourceFile::GlobalGetLumpSize(lump);
 		maplumpdata = (char*)CResourceFile::GlobalReadLump(lump);
