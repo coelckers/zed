@@ -140,7 +140,7 @@ void ConvertBuildMap(FileReader& fr, FileWriter* fw)
 		fw->Printf("zvel = %d;\n", sprite[i].zvel);
 		fw->Printf("zvel = %d;\n", sprite[i].zvel);
 		fw->Printf("id = %d;\n", sprite[i].lotag);
-		fw->Printf("type = %d;\n", sprite[i].hitag);
+		fw->Printf("special = %d;\n", sprite[i].hitag);
 		fw->Printf("extra = %d;\n", sprite[i].extra);
 		fw->Printf("detail = %d;\n", sprite[i].detail);
 

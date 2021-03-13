@@ -440,7 +440,7 @@ void CreateThingOrder()
 
 				if (td->statclass==statflags[f])
 				{
-					if (cgc->ThingMap[td->DoomEdNum]==td) ThingOrder.Push(td->DoomEdNum);
+					if (td->DoomEdNum >= 0 && td->DoomEdNum < 32768 && cgc->ThingMap[td->DoomEdNum]==td) ThingOrder.Push(td->DoomEdNum);
 				}
 			}
 		}

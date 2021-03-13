@@ -250,7 +250,7 @@ public:
 	GameConfig();
 	~GameConfig();
 
-	ThingDesc * ThingMap[32768];	// for quick and easy access
+	ThingDesc * ThingMap[32769];	// for quick and easy access
 	LineSpecial * LineMap[8192];
 	SectorSpecial * SectorMap[32768+256];
 	Lock * LockMap[256];

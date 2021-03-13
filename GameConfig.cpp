@@ -237,7 +237,7 @@ ThingGroup * GameConfig::ParseThingGroup(ScriptMan & sc, ThingDesc & defaultthin
 				if (!discard) 
 				{
 					tg->Push(td);
-					if (td->DoomEdNum>=0 && td->DoomEdNum<32768) ThingMap[td->DoomEdNum]=td;
+					if (td->DoomEdNum>=0 && td->DoomEdNum<=32768) ThingMap[td->DoomEdNum]=td;
 				}
 				else delete td;
 			}
@@ -1063,7 +1063,7 @@ void GameConfig::InitConfig(wxString filename)
 	thisconfig=filename;
 	ParseConfig(filename, true, true, true, true, true, true);
 
-	for(int i=0;i<32768;i++)
+	for(int i=0;i<=32768;i++)
 	{
 		if (ThingMap[i]!=NULL)
 			InitColor(&ThingMap[i]->realpens,ThingMap[i]->penname.c_str());
@@ -1361,10 +1361,11 @@ wxString GameConfig::GetThingName(int thing, bool withnumber,bool forcedoom)
 
 
 	ThingDesc * td=thing>=0 && thing<32768? ThingMap[thing] : NULL;
+	if (td == nullptr) td = ThingMap[32768];
 
 	if (!td)
 	{
-		ret.Printf("<UNKNOWN %04d>", thing);
+		ret.Printf("[%04d] UNKNOWN", thing);
 		return ret;
 	}
 	else if (withnumber)
@@ -1403,6 +1404,7 @@ wxString GameConfig::GetThingArg(int thing, int arg)
 wxColour GameConfig::GetThingColor(int thing)
 {
 	ThingDesc * td=thing>=0 && thing<32768? ThingMap[thing] : NULL;
+	if (td == nullptr) td = ThingMap[32768];
 	CColor * col;
 //bool printerpen=thing>65535;
 
@@ -2073,7 +2075,15 @@ GameConfig * ConfigManager::FindDefaultConfig(const char *game, bool extended, b
 	if (textmap) gamename += "_textmap";
 
 	const char *configname = config.GetValueForKey(gamename);
-	if (configname == NULL) return NULL;
+	if (configname == NULL)
+	{
+		gamename = game;
+
+		if (extended) gamename += "_extended";
+
+		configname = config.GetValueForKey(gamename);
+		if (configname == NULL) return NULL;
+	}
 	return GetConfig(configname);
 }
 
